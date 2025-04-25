@@ -9,7 +9,9 @@ import serial
 
 #ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
 
-ser = serial.Serial('COM10', 115200, timeout=1)
+try: ser = serial.Serial('COM6', 115200, timeout=1)
+except: print("poort wordt al gebruikt")
+
 COM_EVENT = pygame.USEREVENT + 1
 
 pygame.init()
@@ -160,8 +162,9 @@ def read_serial():
             
 
 
-def springtouw():
-    global springtouw_i_surf, springtouw_i_rect, spring_touw_t_surf, spring_touw_t_rect, starttrans_surf, starttrans_rect, screen_y, screen_x, springtouwdeel_grootte, uitrekking, springtouwdeel_grootte, springtouw_draairichting, springtouw_achter, player, grond_hoogte, moeilijkheid, moeilijkheid_text, start_delay, end_delay, startup, end_delay, game_status, score, middelste_springtouwdeel, springtouw_group, springtouw_functie, grond, begin_achtergrond, achtergrond, player_breedte, player_lengte, player_grootte, springtouw_draairichting_save, springtouwdeel_grootte, springtouw_i_rect, springtouw_i_surf, spring_touw_t_surf, spring_touw_t_rect, starttrans_surf, starttrans_rect, verander_springtouwgrootte
+def springtouw(game_state):
+    global springtouw_i_surf, springtouw_i_rect, spring_touw_t_surf, spring_touw_t_rect, starttrans_surf, starttrans_rect, screen_y, screen_x, springtouwdeel_grootte, uitrekking, springtouwdeel_grootte, springtouw_draairichting, springtouw_achter, player, grond_hoogte, moeilijkheid, moeilijkheid_text, start_delay, end_delay, startup, end_delay, game_status, score, middelste_springtouwdeel, springtouw_group, springtouw_functie, grond, begin_achtergrond, achtergrond, player_breedte, player_lengte, player_grootte, springtouw_draairichting_save, springtouwdeel_grootte, springtouw_i_rect, springtouw_i_surf, spring_touw_t_surf, spring_touw_t_rect, starttrans_surf, starttrans_rect, verander_springtouwgrootte\
+        ,snelheid_touw,tolerantie,groen_hoogte, x,move_springtouw,groen_jump,rood_jump,blit_tutorial_text1,blit_tutorial_text2,blit_tutorial_text3,plyr_kan_gekilled_wrdn
     
     #aanpasbare variabele, misschien in game class plaatsen voor overzichtelijkheid?
     hoogste_y = 0 #afblijven!!!!
@@ -183,18 +186,27 @@ def springtouw():
     springtouw_achter = springtouw_draairichting
     startup = True
     end_delay = False
+    move_springtouw = False
+    groen_jump = False
+    rood_jump = False
+    blit_tutorial_text1 = False
+    blit_tutorial_text2 = True
+    blit_tutorial_text3 = False
+    plyr_kan_gekilled_wrdn = True
 
     #initieer pygame en andere geralteerde zaken
     screen = pygame.display.set_mode((1000,500))
     screen_x = screen.get_width()
     screen_y = screen.get_height()
     pygame.display.set_caption('springtouw')
-    game_status = 'starting_screen' #starting_screen, playing, end_screenn instellingen
+    game_status = game_state #starting_screen, playing, end_screenn instellingen, tutorial
     clock = pygame.time.Clock()
     none_font = pygame.font.Font(None,int(screen_y*(70/500)))
     start_font = pygame.font.Font(None,int(screen_y*(95/500)))
     instellingen_font = pygame.font.Font(None,int(screen_y*(60/500)))
     moeilijkheid_font = pygame.font.Font(None,int(screen_y*(70/500)))
+    
+
 
 
     def relativeer(waarde,x_y = "y"):
@@ -227,7 +239,7 @@ def springtouw():
         elif difficulty ==2:
             snelheid_touw = 0.03
             tolerantie = 2
-            groen_hoogte = 300
+            groen_hoogte = 315
 
         elif difficulty ==3:
             snelheid_touw = 0.04
@@ -266,6 +278,8 @@ def springtouw():
 
             if player.y_status == 'staan':#als de player niet heeft gesprongen verlies je
                 end_delay = True
+                if game_status == "tutorial":
+                    select_difficulty(1)
                 game_status = 'end_screen'
             
         #checkt of het springtouw aan de top is aan de hand van het middelste deel
@@ -281,6 +295,8 @@ def springtouw():
           
             if player.rect.top <= maximum+tolerantie:
                 end_delay = True
+                if game_status == "tutorial":
+                    select_difficulty(1)
                 game_status = 'end_screen'
 
     class Achtergrond:
@@ -387,7 +403,11 @@ def springtouw():
     instellingen_text = Text(text = "druk op b voor instellingen", font=instellingen_font, x=screen_x/2, y=screen_y/2 + screen_y/4)
     instellingenTerugkeer_text = Text(text="druk op b op terug te keren",font=instellingen_font)
     instellingenTerugkeer_text.rect.top=0
-
+    tutorial_text1 = Text(text = "Spring bij groen!",font=start_font,y = screen_y/4)
+    tutorial_text2 = Text(text = "elke sprong is een punt",font =start_font,y=screen_y/4 - 20)
+    tutorial_text2_1 = Text(text = "knijp om te springen!", font = start_font,y=screen_y/4 + 50)
+    tutorial_text3 = Text(text = "je verliest als je het springtouw raakt",font = none_font, y = screen_y/4 - 20)
+    tutorial_text3_1 = Text(text = "probeer het eens uit", font = none_font, y = 7*screen_y/8)
 
     #maakt van de classes bruikbare objects
     player = Player('graphics/player2.png',screen_x/2,screen_y/2,250,166)
@@ -410,11 +430,19 @@ def springtouw():
     middelste_springtouwdeel = springtouw_group[int(aantal_springtouwdelen/2)]
     x = math.pi/2 + 0.5
 
+
+
+
+
     while True:
+        if game_status == "tutorial":
+            plyr_kan_gekilled_wrdn = False
+            startup = False
     
         if middelste_springtouwdeel.rect.y > hoogste_y:
             hoogste_y = middelste_springtouwdeel.rect.y
             #print(hoogste_y)
+            
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -425,6 +453,7 @@ def springtouw():
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     exit()
+                    
             if game_status == 'starting_screen':
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
@@ -441,11 +470,33 @@ def springtouw():
                     if event.key == pygame.K_b:
                         game_status = 'instellingen'
                         print("instellingen")
+                        
+                if event.type == COM_EVENT:
+                    if event.message.strip() == "right_button_pressed":
+                        select_difficulty(moeilijkheid)
+                        restart_game()
+                        game_status = 'playing'
+                    if event.message.strip() == "left_button_pressed":
+                        if moeilijkheid == 3:
+                            moeilijkheid = 1
+                        else: moeilijkheid += 1
+                        moeilijkheid_text.update(text = f"huidige moeilijkheid: {moeilijkheid}")
+                        
+                        
+ #              elif event.type == COM_EVENT:
+  #                  print(f"Received from COM port:{event.message}")
+   #                 if event.message.strip() == "left_button_pressed":
+#
+ #                       if event.message.strip() == "left_button_released":   
                     
             elif game_status == 'playing':
                 if player.y_status == 'staan':
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_r:
+                            player.springen(spronghoogte)
+                            score.score += 1
+                    if event.type == COM_EVENT:
+                        if event.message.strip() == "right_button_pressed" or "left_bitton_pressed":
                             player.springen(spronghoogte)
                             score.score += 1
                     
@@ -457,14 +508,45 @@ def springtouw():
                     if event.key == pygame.K_b:
                         game_status = 'instellingen'
                         print("instellingen")
+
+                if event.type == COM_EVENT:
+                    if event.message.strip() == "right_button_pressed":
+                        restart_game()
+                        game_status = 'playing'
         
             elif game_status == 'instellingen':
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_b:
                         game_status = 'starting_screen'
                         print("starting_screen")
-        #print(game_status)
-        #print(startup)
+
+                if event.type == COM_EVENT:
+                    if event.message.strip() == "right_button_pressed" and "left_button_pressed":
+                        pass
+    
+            elif game_status == 'tutorial':
+                if player.y_status == 'staan':
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_r:
+                            player.springen(spronghoogte)
+                            score.score += 1
+                            if move_springtouw == False:
+                                move_springtouw = True
+                                groen_jump = True
+                                rood_jump = True
+                    if event.type == COM_EVENT:
+                        if event.message.strip() == "right_button_pressed" or "left_button_pressed":
+                           player.springen(spronghoogte)
+                           score.score += 1
+                           if move_springtouw == False:
+                               move_springtouw = True
+                               groen_jump = True
+                               rood_jump = True                           
+                        
+                        
+                        
+                        
+
         if game_status == 'starting_screen':
             begin_achtergrond.blit(achtergrond.image,achtergrond.rect)
             start_text.blit()
@@ -524,6 +606,79 @@ def springtouw():
         elif game_status == 'instellingen':
             achtergrond.blit(achtergrond.image,achtergrond.rect)
             instellingenTerugkeer_text.blit()
+            
+        elif game_status == "tutorial":
+            if score.score >= 3:
+                plyr_kan_gekilled_wrdn = True
+            
+            #maakt het scherm groen als je moet springen
+            if middelste_springtouwdeel.rect.y >= groen_hoogte and springtouw_draairichting != springtouw_achter:
+                achtergrond.blit(achtergrond.green,achtergrond.green_rect)
+                if groen_jump == False:
+                    move_springtouw = False
+                    blit_tutorial_text1 = True
+            else:
+                screen.blit(achtergrond.air,achtergrond.air_rect)
+                if groen_jump == True:
+                    move_springtouw = True
+                groen_jump = False
+                blit_tutorial_text1 = False
+            
+            #maakt het scherm rood als je niet moet springen
+            if middelste_springtouwdeel.rect.y < (maximum+30) and middelste_springtouwdeel.rect.y > (maximum+10) and springtouw_draairichting == springtouw_achter and score.score >= 3:
+                screen.blit(achtergrond.red,achtergrond.red_rect)
+                if rood_jump == False:
+                    move_springtouw = False
+                    blit_tutorial_text3 = True
+            else:
+                if rood_jump == True:
+                    move_springtouw = True
+                rood_jump = False
+                blit_tutorial_text3
+                
+                
+            screen.blit(grond.image,grond.rect)
+            #print(score.score)
+            score.update()
+            score.blit()
+            player.update_status()
+            
+            if springtouw_achter == False:
+                screen.blit(player.image,player.rect)
+                
+            #springtouw y positite berkenen
+            for springtouw in springtouw_group:
+                springtouw.rect.y = springtouw_functie(springtouw.rect.center[0],x)
+                #springtouw.rect.y = (screen_y/2 + (math.sin(x)*math.sin(springtouw.rect.x*math.pi/screen_x)*uitrekking))
+                screen.blit(springtouw.image,springtouw.rect)
+            if move_springtouw:
+                x += snelheid_touw
+            draairichting_springtouw(springtouw_draairichting)
+                
+            if springtouw_achter:
+                screen.blit(player.image,player.rect)
+                
+            #blit de tuturial text voor over het touw springen
+            if blit_tutorial_text1:
+                tutorial_text1.blit()       
+            #blit de tutorial text voor punten halen
+            elif blit_tutorial_text2:
+                tutorial_text2.blit()
+                tutorial_text2_1.blit()
+                if move_springtouw == True and player.y_status == "staan":
+                    blit_tutorial_text2 = False
+            elif blit_tutorial_text3:
+                tutorial_text3.blit()
+                tutorial_text3_1.blit()
+                if move_springtouw == True and player.y_status == "staan":
+                    blit_tutorial_text2 = False
+    
+            if startup == True:
+                pygame.display.update()
+                pygame.time.wait(start_delay)
+                for event in pygame.event.get():#werkt opgestapelde events weg
+                    pass
+                startup = False
         
         
         clock.tick(60)
@@ -1236,6 +1391,8 @@ def spring_tutorial():
                 exit_main_code
             if event.type == pygame.MOUSEBUTTONDOWN:  # Click to exit tutorial
                 running = False
+        
+        springtouw("tutorial")
 
         pygame.display.update()
         clock.tick(60)
@@ -1627,7 +1784,7 @@ while True:
         screen.fill('pink')
         #print(game_mode)
         if game_mode == 'spring_touw':
-            springtouw()
+            springtouw("starting_screen")
             print('playing spring touw')
         elif game_mode == 'ski':
             ski_game()
